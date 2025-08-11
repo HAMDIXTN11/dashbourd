@@ -6,8 +6,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import re
 
-st.set_page_config(page_title="📊 Dashboard Pro (Auto-Detect)", layout="wide")
-st.title("📊 Dashboard Pro — Auto-Detect")
+st.set_page_config(page_title="📊 Dashboard Pro (Auto-Detect + Net/Transfer)", layout="wide")
+st.title("📊 Dashboard Pro — Auto-Detect + Net/Transfer Value")
 
 # ---------- Helpers ----------
 def norm(s: str) -> str:
@@ -44,27 +44,30 @@ if uploaded_file:
         st.subheader("Aperçu des données")
         st.dataframe(df.head(), use_container_width=True)
 
-        # ---------- Auto-detect targets ----------
+        # ---------- Auto-detect targets (separate Net vs Transfer) ----------
         targets = {
-            "vente": ["net transfer value","net_transfervalue","nettransfervalue",
-                      "transfer value","transfervalue","prix vente","price","amount","total","montant","revenue"],
-            "date":  ["date","created time","created date","order date","orderdate","datetime","timestamp","data"],
-            "status":["status","order status","fulfillment status","etat","state","statut","reason"],
-            "qte":   ["quantity","qty","qte","sku quantity","sku qty","quantité"],
-            "prix":  ["prix achat","cost","prix article","purchase price","unit cost","cost price"],
-            "ship":  ["shipping fees","delivery fees","frais de livraison","livraison","shipping","delivery","fulfillment fees","frais expédition","frais transport"],
-            "other": ["cod fees","cod","commission","service fees","payment fees","frais service","frais paiement","frais commission"],
-            "prod":  ["product","product name","sku","item","title","designation","article"],
-            "city":  ["city","ville","locality","region"],
-            "ads":   ["ads spend","ad spend","advertising","marketing","facebook ads","google ads","tiktok ads","sponsored","ad_cost","campaign spend"]
+            "net":      ["net transfer value","net_transfervalue","nettransfervalue","net"],
+            "transfer": ["transfer value","transfervalue","transfer"],
+            "vente":    ["prix vente","price","amount","total","montant","revenue","sale"],
+            "date":     ["date","created time","created date","order date","orderdate","datetime","timestamp","data"],
+            "status":   ["status","order status","fulfillment status","etat","state","statut","reason"],
+            "qte":      ["quantity","qty","qte","sku quantity","sku qty","quantité"],
+            "prix":     ["prix achat","cost","prix article","purchase price","unit cost","cost price"],
+            "ship":     ["shipping fees","delivery fees","frais de livraison","livraison","shipping","delivery","fulfillment fees","frais expédition","frais transport"],
+            "other":    ["cod fees","cod","commission","service fees","payment fees","frais service","frais paiement","frais commission"],
+            "prod":     ["product","product name","sku","item","title","designation","article"],
+            "city":     ["city","ville","locality","region"],
+            "ads":      ["ads spend","ad spend","advertising","marketing","facebook ads","google ads","tiktok ads","sponsored","ad_cost","campaign spend"]
         }
         det = auto_detect(df.columns.tolist(), targets)
 
-        # ---------- Mapping avec valeurs par défaut auto ----------
-        col_vente = st.selectbox("🛒 Ventes (Net/Transfer Value)", df.columns,
-                                 index=(df.columns.get_loc(det["vente"]) if det["vente"] in df.columns else 0))
-        col_date  = st.selectbox("📅 Date", df.columns,
-                                 index=(df.columns.get_loc(det["date"]) if det["date"] in df.columns else 0))
+        # Build revenue selection priority: Net -> Transfer -> Vente
+        revenue_default = det["net"] or det["transfer"] or det["vente"] or df.columns[0]
+        idx_default = df.columns.get_loc(revenue_default) if revenue_default in df.columns else 0
+        col_revenue = st.selectbox("🛒 Colonne des ventes (choix: Net Transfer / Transfer / ...)", df.columns, index=idx_default)
+        st.caption("Astuce: choisi 'Net Transfer Value' إذا موجودة.")
+
+        col_date  = st.selectbox("📅 Date", df.columns, index=(df.columns.get_loc(det["date"]) if det["date"] in df.columns else 0))
         col_status = st.selectbox("🏷️ Statut (optionnel)", ["(Aucune)"]+list(df.columns),
                                   index=((["(Aucune)"]+list(df.columns)).index(det["status"]) if det["status"] else 0))
         col_qte = st.selectbox("📦 Quantité (optionnel)", ["(Aucune)"]+list(df.columns),
@@ -92,7 +95,7 @@ if uploaded_file:
         else:
             prix_fix = st.number_input("💲 Prix d'achat fixe par article", min_value=0.0, value=0.0, step=0.1)
 
-        # Ads (sans upload fichiers)
+        # Ads (simple)
         ads_mode = st.radio("📣 Dépenses Ads", ["Aucune", "Colonne dans ventes", "Montant total (période filtrée)"], horizontal=True)
         if ads_mode == "Colonne dans ventes":
             col_ads = st.selectbox("📄 Colonne Ads dans ventes", df.columns,
@@ -101,7 +104,13 @@ if uploaded_file:
             ads_total = st.number_input("💸 Total Ads pour la période filtrée", min_value=0.0, value=0.0, step=10.0)
 
         # ---------- Conversions ----------
-        df["VentesBrutes"] = safe_num(df[col_vente]).fillna(0)
+        # Keep both Net/Transfer as columns if available (for display)
+        if det["net"] in df.columns:
+            df["NetTransferValue"] = safe_num(df[det["net"]])
+        if det["transfer"] in df.columns:
+            df["TransferValue"] = safe_num(df[det["transfer"]])
+
+        df["VentesBrutes"] = safe_num(df[col_revenue]).fillna(0)
         df["Date"] = pd.to_datetime(df[col_date], errors="coerce")
 
         if col_qte == "(Aucune)":
@@ -128,6 +137,9 @@ if uploaded_file:
         df["Ventes"] = df["VentesBrutes"] - (df["FraisLivraison"] + df["AutresFrais"]) if incl_fees else df["VentesBrutes"]
 
         # ---------- Filtres ----------
+        # Drop rows without date to avoid chart errors
+        df = df.dropna(subset=["Date"]).copy()
+
         min_date, max_date = df["Date"].min(), df["Date"].max()
         d_range = st.date_input("📅 Filtrer par date", [min_date, max_date])
         filt = (df["Date"].dt.date >= d_range[0]) & (df["Date"].dt.date <= d_range[1])
@@ -167,17 +179,18 @@ if uploaded_file:
 
         st.markdown("---")
 
-        # ---------- CHARTS PRO (no extra uploads) ----------
+        # ---------- CHARTS PRO (Date fix via resample) ----------
         st.subheader("📈 Évolution — Ventes & Profits (après Ads)")
-        daily = filtered.groupby(filtered["Date"].dt.date).agg(
-            Ventes=("Ventes","sum"),
-            ProfitApresAds=("ProfitApresAds","sum"),
-            COGS=("CoutTotal","sum"),
-            Ship=("FraisLivraison","sum"),
-            Divers=("AutresFrais","sum"),
-            Ads=("AdsAllocated","sum")
-        ).reset_index().rename(columns={"Date":"Jour"})
-        # line chart
+        # resample on Date to guarantee a 'Date' column (fix KeyError)
+        daily = filtered.set_index("Date").resample("D").agg({
+            "Ventes":"sum",
+            "ProfitApresAds":"sum",
+            "CoutTotal":"sum",
+            "FraisLivraison":"sum",
+            "AutresFrais":"sum",
+            "AdsAllocated":"sum"
+        }).reset_index()
+
         fig_line = go.Figure()
         fig_line.add_trace(go.Scatter(x=daily["Date"], y=daily["Ventes"], mode="lines+markers", name="Ventes", line=dict(width=3)))
         fig_line.add_trace(go.Scatter(x=daily["Date"], y=daily["ProfitApresAds"], mode="lines+markers", name="Profit après Ads", line=dict(width=3)))
@@ -185,14 +198,14 @@ if uploaded_file:
         st.plotly_chart(fig_line, use_container_width=True)
 
         st.subheader("🧱 Décomposition quotidienne — Coûts empilés vs Ventes")
-        stacked = daily.melt(id_vars=["Date"], value_vars=["COGS","Ship","Divers","Ads"],
+        stacked = daily.melt(id_vars=["Date"], value_vars=["CoutTotal","FraisLivraison","AutresFrais","AdsAllocated"],
                              var_name="Type", value_name="Montant")
         fig_stack = px.bar(stacked, x="Date", y="Montant", color="Type", title="COGS + Livraison + Divers + Ads (quotidien)")
         fig_stack.add_trace(go.Scatter(x=daily["Date"], y=daily["Ventes"], mode="lines", name="Ventes", line=dict(width=2)))
         fig_stack.update_layout(hovermode="x unified", legend=dict(orientation="h"), margin=dict(l=10,r=10,t=40,b=10))
         st.plotly_chart(fig_stack, use_container_width=True)
 
-        # Optionnels: Top produits / villes (بدون رفع ملفات)
+        # Optionnels: Top produits / villes
         two = st.columns(2)
         if col_prod != "(Aucune)":
             prod_agg = filtered.groupby(col_prod, dropna=False).agg(Ventes=("Ventes","sum"), Profit=("ProfitApresAds","sum")).reset_index().sort_values("Ventes", ascending=False).head(10)
@@ -203,12 +216,12 @@ if uploaded_file:
 
         # ---------- Table & Export ----------
         st.subheader("📋 Données calculées (aperçu)")
-        cols = ["Date","VentesBrutes","FraisLivraison","AutresFrais","Ventes","Quantité","PrixArticle","CoutTotal",
+        cols = ["Date","NetTransferValue","TransferValue","VentesBrutes","FraisLivraison","AutresFrais","Ventes","Quantité","PrixArticle","CoutTotal",
                 "AdsAllocated","ProfitAvantAds","ProfitApresAds","Marge %","Marge % Après Ads"]
         if col_status != "(Aucune)": cols.insert(1, col_status)
         if col_prod != "(Aucune)": cols.insert(1, col_prod)
         if col_city != "(Aucune)": cols.insert(1, col_city)
-        cols = [c for c in cols if c in filtered.columns or c in ["Date","VentesBrutes","FraisLivraison","AutresFrais","Ventes","Quantité","PrixArticle","CoutTotal","AdsAllocated","ProfitAvantAds","ProfitApresAds","Marge %","Marge % Après Ads"]]
+        cols = [c for c in cols if c in filtered.columns or c in ["Date","VentesBrutes","FraisLivraison","AutresFrais","Ventes","Quantité","PrixArticle","CoutTotal","AdsAllocated","ProfitAvantAds","ProfitApresAds","Marge %","Marge % Après Ads","NetTransferValue","TransferValue"]]
         st.dataframe(filtered[cols].head(500), use_container_width=True)
 
         st.subheader("📥 Export")
