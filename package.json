@@ -1,0 +1,13 @@
+{
+  "name": "meta-auto-ads-canvas",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "netlify dev",
+    "start": "netlify dev"
+  },
+  "dependencies": {
+    "facebook-nodejs-business-sdk": "^16.0.1"
+  }
+}

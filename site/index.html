@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Corella Auto Ads — Canvas</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>window.FB_APP_ID = "YOUR_FACEBOOK_APP_ID";</script>
+</head>
+<body>
+  <header>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <h1 style="margin-right:auto">Corella Auto Ads</h1>
+      <button id="btnFb" title="Login with Facebook">Login with Facebook</button>
+      <label style="display:flex;gap:6px;align-items:center;color:#b5b5b5">Admin token
+        <input id="admintoken" type="password" placeholder="optional" style="padding:8px;border-radius:8px;border:1px solid #333;background:#0a0a0a;color:#eee;">
+      </label>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <h1 style="margin-right:auto">Corella Auto Ads</h1>
+      <label style="display:flex;gap:6px;align-items:center;color:#b5b5b5">Admin token <input id="admintoken" type="password" placeholder="optional" style="padding:8px;border-radius:8px;border:1px solid #333;background:#0a0a0a;color:#eee;"></label>
+    </div>
+    <h1>Corella Auto Ads</h1>
+    <p>Messages (WhatsApp) + Engagement — from your browser.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1) Login & choose assets</h2>
+      <div class="grid">
+        <div>
+          <label>Ad Account
+            <select id="ad_account"></select>
+          </label>
+        </div>
+        <div>
+          <label>Facebook Page
+            <select id="page_id"></select>
+          </label>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnLoad">Load last 25 posts</button>
+      </div>
+      <div id="posts"></div>
+    </section>
+
+    <section class="card">
+      <h2>2) Budgets & Targets</h2>
+      <button id="btnLoad">Load last 25 posts</button>
+      <div id="posts"></div>
+    </section>
+
+    <section class="card">
+      <h2>2) Budgets & Targets</h2>
+      <div class="grid">
+        <div>
+          <h3>Messages</h3>
+          <label>Min (DT/day) <input id="msg_min" type="number" step="0.1" value="10"></label>
+          <label>Max (DT/day) <input id="msg_max" type="number" step="0.1" value="200"></label>
+          <label>Target CPA (DT/conv) <input id="msg_target" type="number" step="0.01" value="2.5"></label>
+        </div>
+        <div>
+          <h3>Engagement</h3>
+          <label>Min (DT/day) <input id="eng_min" type="number" step="0.1" value="10"></label>
+          <label>Max (DT/day) <input id="eng_max" type="number" step="0.1" value="150"></label>
+          <label>Target CPE (DT/eng) <input id="eng_target" type="number" step="0.01" value="0.2"></label>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnSetup">Setup & Launch</button>
+        <button id="btnOptimize">Optimize Now</button>
+      </div>
+      <pre id="log"></pre>
+    </section>
+
+    <section class="card">
+      <h2>3) KPI Snapshot</h2>
+      <canvas id="chart" height="220"></canvas>
+    </section>
+  </main>
+
+  <footer>
+    <small>Made for Hamdi • Corella Store</small>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>
