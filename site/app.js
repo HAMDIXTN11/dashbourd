@@ -15,7 +15,30 @@ function log(msg) {
   logEl.textContent = `[${t}] ` + msg + "\n" + logEl.textContent;
 }
 
+document.getElementById('btnFb').addEventListener('click', () => {
+  const APP_ID = window.FB_APP_ID || prompt('Enter your Facebook App ID');
+  const redirect = window.location.origin + '/auth.html';
+  const scope = [
+    'ads_management','ads_read',
+    'pages_read_engagement','pages_read_user_content','pages_manage_ads',
+    'public_profile'
+  ].join(',');
+  const authUrl =
+    `https://www.facebook.com/dialog/oauth?client_id=${APP_ID}` +
+    `&redirect_uri=${encodeURIComponent(redirect)}` +
+    `&response_type=token&scope=${encodeURIComponent(scope)}`;
 
+  const w = window.open(authUrl, '_blank', 'width=520,height=700');
+  // لو Safari بلوكاه، نفتح في نفس الصفحة:
+  if (!w) window.location.href = authUrl;
+});
+
+// مجرّد راصد: كي يتم حفظ التوكن، نحمّلو الأصول تلقائيًا
+window.addEventListener('storage', (e) => {
+  if (e.key === 'fb_token' && e.newValue){
+    FB_TOKEN = e.newValue; fetchAssets();
+  }
+});
 async function fetchAssets() {
   if (!FB_TOKEN) { alert('Login with Facebook first'); return; }
   const res = await fetch(api.assets, { headers: { 'X-FB-Token': FB_TOKEN } });
