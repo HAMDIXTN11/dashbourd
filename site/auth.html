@@ -1,0 +1,19 @@
+<!doctype html>
+<html><body>
+<script>
+(function(){
+  try{
+    var hash = location.hash.substring(1);
+    var p = new URLSearchParams(hash);
+    var t = p.get('access_token');
+    if (t){
+      localStorage.setItem('fb_token', t);
+      if (window.opener){ window.opener.location.reload(); window.close(); }
+      else { location.replace('/'); }
+    } else {
+      document.body.textContent = 'No token returned.';
+    }
+  }catch(e){ document.body.textContent = 'Error: '+ e; }
+})();
+</script>
+</body></html>
